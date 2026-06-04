@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://YOUR-RENDER-URL.onrender.com/api'
+  apiUrl: 'https://sonify-eprg.onrender.com/api'
 };
