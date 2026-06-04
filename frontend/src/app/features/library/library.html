@@ -1,0 +1,119 @@
+<div class="max-w-7xl mx-auto px-6 py-12">
+
+  <div class="flex items-end justify-between mb-10">
+    <div>
+      <h1 class="text-4xl font-bold mb-1">Library</h1>
+      <p class="text-gray-400">Your saved sonifications</p>
+    </div>
+    <a routerLink="/" class="px-5 py-2.5 rounded-xl text-sm font-semibold
+                              bg-gradient-to-r from-sonify-accent to-sonify-accent-2">
+      + New
+    </a>
+  </div>
+
+  @if (loading()) {
+    <div class="flex items-center justify-center gap-3 text-sonify-accent py-24">
+      <div class="w-2 h-2 rounded-full bg-sonify-accent animate-pulse"></div>
+      <div class="w-2 h-2 rounded-full bg-sonify-accent animate-pulse" style="animation-delay: 0.2s"></div>
+      <div class="w-2 h-2 rounded-full bg-sonify-accent animate-pulse" style="animation-delay: 0.4s"></div>
+      <span>Loading...</span>
+    </div>
+  }
+
+  @if (error()) {
+    <div class="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300">
+      {{ error() }}
+    </div>
+  }
+
+  @if (!loading() && !error() && compositions().length === 0) {
+    <div class="text-center py-24">
+      <div class="text-6xl mb-4 opacity-30">♪</div>
+      <h2 class="text-2xl font-bold mb-2">Empty library</h2>
+      <p class="text-gray-400 mb-6">Save a composition from the player to see it here.</p>
+      <a routerLink="/" class="inline-block px-6 py-3 rounded-xl
+                                bg-gradient-to-r from-sonify-accent to-sonify-accent-2 font-semibold">
+        Create your first
+      </a>
+    </div>
+  }
+
+  @if (!loading() && compositions().length > 0) {
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      @for (c of compositions(); track c.id) {
+        <div (click)="open(c)"
+             class="group relative p-5 rounded-2xl bg-sonify-surface border border-white/5
+                    hover:border-sonify-accent/40 cursor-pointer transition
+                    hover:-translate-y-0.5">
+
+          <div class="flex items-start justify-between mb-4">
+            <div class="min-w-0 flex-1">
+              <h3 class="text-xl font-bold truncate" [title]="c.name">{{ c.name }}</h3>
+              <p class="text-xs text-gray-500 mt-0.5 truncate">{{ c.filename }}</p>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sonify-accent to-sonify-accent-2
+                        flex items-center justify-center shrink-0 ml-3">
+              ▶
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 mb-4 text-center">
+            <div class="p-2 rounded-lg bg-white/5">
+              <p class="text-[10px] text-gray-500 uppercase">BPM</p>
+              <p class="font-mono text-sm">{{ c.bpm }}</p>
+            </div>
+            <div class="p-2 rounded-lg bg-white/5">
+              <p class="text-[10px] text-gray-500 uppercase">Scale</p>
+              <p class="font-mono text-sm truncate">{{ c.scale }}</p>
+            </div>
+            <div class="p-2 rounded-lg bg-white/5">
+              <p class="text-[10px] text-gray-500 uppercase">Notes</p>
+              <p class="font-mono text-sm">{{ c.dataPoints.length }}</p>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-xs text-gray-500">
+            <span>{{ c.createdAt | date:'mediumDate' }}</span>
+            <span>{{ c.mappings.length }} mappings</span>
+          </div>
+
+          <!-- Delete button -->
+          @if (confirmDeleteId() !== c.id) {
+            <button (click)="askDelete(c.id, $event)"
+                    class="absolute top-3 right-3 w-7 h-7 rounded-md
+                           opacity-0 group-hover:opacity-100
+                           bg-red-500/10 text-red-400 hover:bg-red-500/20
+                           flex items-center justify-center text-sm transition">
+              ✕
+            </button>
+          }
+
+          <!-- Inline confirm -->
+          @if (confirmDeleteId() === c.id) {
+            <div (click)="$event.stopPropagation()"
+                 class="absolute inset-0 rounded-2xl bg-sonify-surface/95 backdrop-blur-sm
+                        flex flex-col items-center justify-center gap-3 p-5">
+              <p class="text-center">Delete "<span class="font-semibold">{{ c.name }}</span>"?</p>
+              <div class="flex gap-2">
+                <button (click)="cancelDelete($event)"
+                        class="px-4 py-2 rounded-lg text-sm bg-white/5 hover:bg-white/10 transition">
+                  Cancel
+                </button>
+                <button (click)="confirmDelete(c.id, $event)"
+                        [disabled]="deletingId() === c.id"
+                        class="px-4 py-2 rounded-lg text-sm bg-red-500/20 text-red-300
+                               hover:bg-red-500/30 disabled:opacity-50 transition">
+                  @if (deletingId() === c.id) {
+                    Deleting...
+                  } @else {
+                    Delete
+                  }
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

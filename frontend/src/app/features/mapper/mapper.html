@@ -1,0 +1,188 @@
+@if (!store.hasData()) {
+  <div class="max-w-2xl mx-auto px-6 py-24 text-center">
+    <h2 class="text-2xl font-bold mb-2">No data loaded</h2>
+    <p class="text-gray-400 mb-6">Upload a CSV first to start mapping.</p>
+    <a
+      routerLink="/"
+      class="inline-block px-6 py-3 rounded-xl bg-gradient-to-r from-sonify-accent to-sonify-accent-2 font-semibold"
+    >
+      Go to Upload
+    </a>
+  </div>
+}
+
+@if (store.parsedCsv(); as csv) {
+  <div class="max-w-7xl mx-auto px-6 py-12">
+    <!-- Header -->
+    <div class="mb-10">
+      <h1 class="text-4xl font-bold mb-2">Shape your sound</h1>
+      <p class="text-gray-400">
+        Drag columns from your data onto the sound dimensions. Tweak the scale and tempo.
+      </p>
+    </div>
+
+    <!-- Global controls -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+      <!-- BPM -->
+      <div class="p-5 rounded-2xl bg-sonify-surface border border-white/5">
+        <div class="flex items-center justify-between mb-3">
+          <label class="text-sm font-semibold uppercase tracking-wider text-gray-400">
+            Tempo
+          </label>
+          <span class="font-mono text-2xl text-sonify-accent">{{ store.bpm() }} BPM</span>
+        </div>
+        <input
+          type="range"
+          min="40"
+          max="240"
+          [value]="store.bpm()"
+          (input)="onBpmChange($event)"
+          class="w-full accent-sonify-accent"
+        />
+        <div class="flex justify-between text-xs text-gray-500 mt-1">
+          <span>40</span>
+          <span>240</span>
+        </div>
+      </div>
+
+      <!-- Scale -->
+      <div class="p-5 rounded-2xl bg-sonify-surface border border-white/5">
+        <label class="text-sm font-semibold uppercase tracking-wider text-gray-400 block mb-3">
+          Scale
+        </label>
+        <div class="grid grid-cols-3 gap-2">
+          @for (s of scales; track s) {
+            <button
+              (click)="store.scale.set(s)"
+              [class.bg-sonify-accent]="store.scale() === s"
+              [class.text-white]="store.scale() === s"
+              [class.text-gray-400]="store.scale() !== s"
+              class="px-3 py-2 rounded-lg text-sm font-medium border border-white/10 hover:border-sonify-accent transition"
+            >
+              {{ scaleLabel(s) }}
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Two-column mapping area -->
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+      <!-- LEFT: Available columns -->
+      <div class="lg:col-span-2">
+        <h3 class="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-4">
+          Your columns
+        </h3>
+        <div class="p-4 rounded-2xl bg-sonify-surface border border-white/5 space-y-2">
+          @for (col of csv.columns; track col.name) {
+            <div
+              draggable="true"
+              (dragstart)="onChipDragStart($event, col.name)"
+              (click)="selectColumn(col.name)"
+              [class.opacity-40]="store.mappedColumnNames().has(col.name)"
+              [class.ring-2]="selectedColumn() === col.name"
+              [class.ring-sonify-accent]="selectedColumn() === col.name"
+              class="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer active:cursor-grabbing border border-transparent hover:border-sonify-accent/30 transition select-none"
+            >
+              <div class="flex items-center gap-3 min-w-0">
+                <span class="text-gray-500 text-xs">⋮⋮</span>
+                <span class="font-medium truncate">{{ col.name }}</span>
+              </div>
+              @if (col.type === 'NUMERIC') {
+                <span
+                  class="px-2 py-0.5 rounded-md text-xs font-mono bg-sonify-accent-2/20 text-sonify-accent-2 shrink-0"
+                >
+                  NUM
+                </span>
+              } @else {
+                <span
+                  class="px-2 py-0.5 rounded-md text-xs font-mono bg-sonify-accent/20 text-sonify-accent shrink-0"
+                >
+                  CAT
+                </span>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- RIGHT: Dimension slots -->
+      <div class="lg:col-span-3 space-y-4">
+        <h3 class="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-4">
+          Sound dimensions
+        </h3>
+
+        @for (slot of dimensionSlots; track slot.dimension) {
+          <div
+            (dragover)="onSlotDragOver($event, slot.dimension)"
+            (dragleave)="onSlotDragLeave($event, slot.dimension)"
+            (drop)="onSlotDrop($event, slot.dimension)"
+            (click)="onSlotTap(slot.dimension)"
+            [class.border-sonify-accent]="
+              hoveredSlot() === slot.dimension || selectedColumn() !== null
+            "
+            class="p-5 rounded-2xl bg-sonify-surface border-2 border-white/5 hover:border-white/20 transition"
+          >
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="text-2xl">{{ slot.icon }}</span>
+                  <span class="font-bold text-lg">{{ slot.dimension }}</span>
+                </div>
+                <p class="text-xs text-gray-500 mt-0.5 ml-9">{{ slot.description }}</p>
+              </div>
+              <span class="text-xs text-gray-600 font-mono shrink-0">
+                prefers {{ slot.preferredType }}
+              </span>
+            </div>
+
+            @if (store.getMappingFor(slot.dimension); as columnName) {
+              <div
+                class="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-sonify-accent/20 to-sonify-accent-2/20 border border-sonify-accent/30"
+              >
+                <span class="font-medium">{{ columnName }}</span>
+                <button
+                  (click)="store.removeMapping(slot.dimension)"
+                  class="w-7 h-7 rounded-md flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition"
+                >
+                  ✕
+                </button>
+              </div>
+            } @else {
+              <div
+                class="p-3 rounded-lg border-2 border-dashed border-white/10 text-center text-sm text-gray-500"
+              >
+                Drop a column here
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Bottom: status + CTA -->
+    <div class="mt-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div>
+        @if (store.isReadyToGenerate()) {
+          <div class="flex items-center gap-2 text-green-400">
+            <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+            <span class="text-sm">Ready to generate</span>
+          </div>
+        } @else {
+          <div class="flex items-center gap-2 text-amber-400">
+            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+            <span class="text-sm">Assign at least the PITCH dimension to continue</span>
+          </div>
+        }
+      </div>
+
+      <button
+        (click)="generate()"
+        [disabled]="!store.isReadyToGenerate()"
+        class="px-8 py-3 rounded-xl font-semibold bg-gradient-to-r from-sonify-accent to-sonify-accent-2 disabled:opacity-30 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-sonify-accent/30 transition-all"
+      >
+        Generate music →
+      </button>
+    </div>
+  </div>
+}

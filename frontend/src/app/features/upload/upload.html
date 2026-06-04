@@ -1,0 +1,220 @@
+<div class="max-w-6xl mx-auto px-6 py-12">
+
+  @if (!store.hasData()) {
+    <!-- Hero + Dropzone state -->
+    <div class="text-center mb-12">
+      <h1 class="text-5xl md:text-6xl font-bold tracking-tight mb-4">
+        Turn data into
+        <span class="bg-gradient-to-r from-sonify-accent to-sonify-accent-2
+                     bg-clip-text text-transparent">music</span>
+      </h1>
+      <p class="text-gray-400 text-lg max-w-2xl mx-auto">
+        Drop a CSV file. We'll analyze your columns and let you map them to pitch, rhythm, and instruments.
+      </p>
+    </div>
+
+    <!-- Dropzone -->
+    <div
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave($event)"
+      (drop)="onDrop($event)"
+      (click)="fileInput.click()"
+      [class.border-sonify-accent]="isDragging()"
+      [class.bg-sonify-accent]="isDragging()"
+      [class.bg-opacity-5]="isDragging()"
+      class="border-2 border-dashed border-white/20 rounded-2xl p-16
+             cursor-pointer transition-all duration-300
+             hover:border-sonify-accent hover:bg-white/5
+             flex flex-col items-center justify-center gap-4">
+
+      <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-sonify-accent to-sonify-accent-2
+                  flex items-center justify-center text-3xl
+                  shadow-2xl shadow-sonify-accent/20">
+        ↑
+      </div>
+
+      <div class="text-center">
+        <p class="text-xl font-semibold">
+          @if (isDragging()) {
+            Drop it!
+          } @else {
+            Drop your CSV here or click to browse
+          }
+        </p>
+        <p class="text-sm text-gray-500 mt-1">Maximum 10MB</p>
+      </div>
+
+      <input #fileInput type="file" accept=".csv" class="hidden"
+             (change)="onFileSelected($event)" />
+    </div>
+
+    @if (error()) {
+      <div class="mt-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300">
+        {{ error() }}
+      </div>
+    }
+
+    @if (isLoading()) {
+      <div class="mt-6 flex items-center justify-center gap-3 text-sonify-accent">
+        <div class="w-2 h-2 rounded-full bg-sonify-accent animate-pulse"></div>
+        <div class="w-2 h-2 rounded-full bg-sonify-accent animate-pulse" style="animation-delay: 0.2s"></div>
+        <div class="w-2 h-2 rounded-full bg-sonify-accent animate-pulse" style="animation-delay: 0.4s"></div>
+        <span>Analyzing your data...</span>
+      </div>
+    }
+      <!-- Divider -->
+    <div class="flex items-center gap-4 my-12 text-gray-500 text-sm">
+      <div class="flex-1 h-px bg-white/10"></div>
+      <span>or try an example</span>
+      <div class="flex-1 h-px bg-white/10"></div>
+    </div>
+
+    <!-- Examples gallery -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      @for (ex of examples; track ex.slug) {
+        <button (click)="loadExample(ex)"
+                [disabled]="loadingExample() !== null"
+                class="group relative text-left p-5 rounded-2xl bg-sonify-surface
+                       border border-white/5 hover:border-white/20
+                       disabled:opacity-50 disabled:cursor-not-allowed
+                       hover:-translate-y-0.5 transition-all">
+
+          <div [class]="'w-12 h-12 mb-4 rounded-xl bg-gradient-to-br ' + ex.accent +
+                        ' flex items-center justify-center text-2xl font-bold shadow-lg'">
+            {{ ex.icon }}
+          </div>
+
+          <h3 class="font-bold text-lg mb-1">{{ ex.name }}</h3>
+          <p class="text-sm text-gray-400 leading-snug mb-4">{{ ex.description }}</p>
+
+          <div class="flex flex-wrap gap-1.5">
+            <span class="px-2 py-0.5 text-xs rounded-md bg-white/5 text-gray-400 font-mono">
+              {{ ex.suggestedBpm }} BPM
+            </span>
+            <span class="px-2 py-0.5 text-xs rounded-md bg-white/5 text-gray-400 font-mono">
+              {{ ex.suggestedScale }}
+            </span>
+          </div>
+
+          @if (loadingExample() === ex.slug) {
+            <div class="absolute inset-0 rounded-2xl bg-sonify-surface/90 backdrop-blur-sm
+                        flex items-center justify-center gap-2">
+              <div class="w-2 h-2 rounded-full bg-sonify-accent animate-pulse"></div>
+              <div class="w-2 h-2 rounded-full bg-sonify-accent animate-pulse" style="animation-delay: 0.2s"></div>
+              <div class="w-2 h-2 rounded-full bg-sonify-accent animate-pulse" style="animation-delay: 0.4s"></div>
+            </div>
+          }
+        </button>
+      }
+    </div>
+
+  }
+
+  @if (store.parsedCsv(); as csv) {
+    <!-- Results state -->
+    <div class="flex items-center justify-between mb-8">
+      <div>
+        <h2 class="text-3xl font-bold">{{ csv.filename }}</h2>
+        <p class="text-gray-400 mt-1">
+          {{ csv.totalRows }} rows · {{ csv.columns.length }} columns
+        </p>
+      </div>
+      <button (click)="reset()"
+              class="px-4 py-2 rounded-lg text-sm text-gray-300
+                     border border-white/10 hover:bg-white/5 transition">
+        Upload different file
+      </button>
+    </div>
+
+    <!-- Column cards -->
+    <h3 class="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-4">
+      Columns detected
+    </h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
+      @for (col of csv.columns; track col.name) {
+        <div class="p-5 rounded-2xl bg-sonify-surface border border-white/5
+                    hover:border-sonify-accent/30 transition">
+
+          <div class="flex items-center justify-between mb-3">
+            <span class="font-semibold truncate" [title]="col.name">{{ col.name }}</span>
+            @if (col.type === 'NUMERIC') {
+              <span class="px-2 py-0.5 rounded-md text-xs font-mono
+                           bg-sonify-accent-2/20 text-sonify-accent-2">
+                NUM
+              </span>
+            } @else {
+              <span class="px-2 py-0.5 rounded-md text-xs font-mono
+                           bg-sonify-accent/20 text-sonify-accent">
+                CAT
+              </span>
+            }
+          </div>
+
+          @if (col.type === 'NUMERIC') {
+            <div class="space-y-2">
+              <div class="flex justify-between text-xs font-mono text-gray-400">
+                <span>min: {{ col.min }}</span>
+                <span>max: {{ col.max }}</span>
+              </div>
+              <div class="h-2 rounded-full bg-white/5 overflow-hidden">
+                <div class="h-full bg-gradient-to-r from-sonify-accent to-sonify-accent-2
+                            rounded-full" style="width: 100%"></div>
+              </div>
+            </div>
+          } @else {
+            <div class="flex flex-wrap gap-1.5">
+              @for (val of (col.uniqueValues ?? []).slice(0, 6); track val) {
+                <span class="px-2 py-0.5 text-xs rounded-md bg-white/5 text-gray-300">
+                  {{ val }}
+                </span>
+              }
+              @if ((col.uniqueValues?.length ?? 0) > 6) {
+                <span class="px-2 py-0.5 text-xs rounded-md text-gray-500">
+                  +{{ (col.uniqueValues?.length ?? 0) - 6 }} more
+                </span>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Preview table -->
+    <h3 class="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-4">
+      Preview ({{ csv.totalRows }} rows)
+    </h3>
+    <div class="rounded-2xl bg-sonify-surface border border-white/5 overflow-hidden mb-12">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-white/5 text-gray-400 text-xs uppercase tracking-wider">
+            <tr>
+              @for (col of csv.columns; track col.name) {
+                <th class="px-4 py-3 text-left font-medium">{{ col.name }}</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of csv.dataPoints.slice(0, 10); track $index) {
+              <tr class="border-t border-white/5">
+                @for (col of csv.columns; track col.name) {
+                  <td class="px-4 py-3 font-mono text-gray-300">{{ row[col.name] }}</td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Continue CTA -->
+    <div class="flex justify-end">
+      <button (click)="continueToMapper()"
+              class="px-8 py-3 rounded-xl font-semibold
+                     bg-gradient-to-r from-sonify-accent to-sonify-accent-2
+                     hover:shadow-lg hover:shadow-sonify-accent/30
+                     transition-all">
+        Continue to mapping →
+      </button>
+    </div>
+  }
+</div>
