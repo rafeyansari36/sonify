@@ -1,16 +1,14 @@
 # ---- Build stage ----
-FROM eclipse-temurin:21-jdk AS build
+FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
 
-# Copy Maven wrapper and config first to leverage Docker layer caching
-COPY .mvn/ .mvn/
-COPY mvnw pom.xml ./
-RUN chmod +x mvnw
-RUN ./mvnw dependency:go-offline -B
+# Copy pom first so Docker caches dependencies across rebuilds
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
 
 # Now copy sources and build
 COPY src ./src
-RUN ./mvnw clean package -DskipTests
+RUN mvn clean package -DskipTests
 
 # ---- Runtime stage ----
 FROM eclipse-temurin:21-jre
