@@ -20,12 +20,12 @@ public class BackendApplication {
 
 	@PostConstruct
 	public void logMongoConfig() {
-		String uri = env.getProperty("spring.data.mongodb.uri");
-		String envUri = System.getenv("SPRING_DATA_MONGODB_URI");
+		String uri = env.getProperty("spring.mongodb.uri");
+		String envUri = System.getenv("SPRING_MONGODB_URI");
 		String maskedUri = uri == null ? "<null>" : maskCredentials(uri);
 		String maskedEnvUri = envUri == null ? "<null>" : maskCredentials(envUri);
-		System.out.println("[BOOT-DEBUG] spring.data.mongodb.uri property = " + maskedUri);
-		System.out.println("[BOOT-DEBUG] SPRING_DATA_MONGODB_URI env      = " + maskedEnvUri);
+		System.out.println("[BOOT-DEBUG] spring.mongodb.uri property = " + maskedUri);
+		System.out.println("[BOOT-DEBUG] SPRING_MONGODB_URI env      = " + maskedEnvUri);
 	}
 
 	private String maskCredentials(String uri) {
